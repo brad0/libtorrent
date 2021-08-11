@@ -403,9 +403,12 @@ struct test_disk_io final : lt::disk_interface
 				if (!m_have.get_bit(block_idx + i))
 				{
 					lt::sha1_hash ph{};
-					for (auto& h : block_hashes)
-						h = rand_sha256();
-					ph = rand_sha1();
+					if (m_state.partial_files)
+					{
+						for (auto& h : block_hashes)
+							h = rand_sha256();
+						ph = rand_sha1();
+					}
 					// If we're missing a block, return an invalid hash
 					post(m_ioc, [h=std::move(h), piece, ph]{ h(piece, ph, lt::storage_error{}); });
 					return;
@@ -477,7 +480,8 @@ struct test_disk_io final : lt::disk_interface
 		, std::function<void(lt::status_t, lt::storage_error const&)> handler) override
 	{
 		TORRENT_ASSERT(m_files);
-		auto const ret = (!m_state.seed || (p->flags & lt::torrent_flags::seed_mode))
+		auto const ret = ((!m_state.seed && !m_state.partial_files)
+			|| (p->flags & lt::torrent_flags::seed_mode))
 			? lt::status_t::no_error
 			: lt::status_t::need_full_check;
 		queue_event(lt::microseconds(1), [this,ret,h=std::move(handler)] () mutable {

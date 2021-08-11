@@ -60,6 +60,12 @@ struct test_disk
 		ret.seed = s;
 		return ret;
 	}
+	test_disk set_partial_files(bool const s = true) const
+	{
+		auto ret = *this;
+		ret.partial_files = s;
+		return ret;
+	}
 	test_disk set_space_left(int const left) const
 	{
 		auto ret = *this;
@@ -95,6 +101,7 @@ struct test_disk
 	lt::time_duration read_time = lt::microseconds(1);
 
 	bool seed = false;
+	bool partial_files = false;
 	bool recover_full_disk = false;
 	int space_left = std::numeric_limits<int>::max();
 

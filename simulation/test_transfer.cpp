@@ -406,6 +406,44 @@ TORRENT_TEST(v2_only_magnet)
 	TEST_EQUAL(passed.size(), 10);
 }
 
+TORRENT_TEST(v2_only_magnet_existing_files)
+{
+	using namespace lt;
+	std::set<piece_index_t> passed;
+	run_test(
+		[](lt::session& ses0, lt::session& ses1) {},
+		[&](lt::session&, lt::alert const* a) {
+			if (auto const* pf = alert_cast<piece_finished_alert>(a))
+				passed.insert(pf->piece_index);
+		},
+		[](std::shared_ptr<lt::session> ses[2]) {
+			TEST_EQUAL(is_seed(*ses[0]), true);
+		}
+		, tx::v2_only | tx::magnet_download
+		, test_disk().set_partial_files()
+	);
+	TEST_EQUAL(passed.size(), 10);
+}
+
+TORRENT_TEST(hybrid_magnet_existing_files)
+{
+	using namespace lt;
+	std::set<piece_index_t> passed;
+	run_test(
+		[](lt::session& ses0, lt::session& ses1) {},
+		[&](lt::session&, lt::alert const* a) {
+			if (auto const* pf = alert_cast<piece_finished_alert>(a))
+				passed.insert(pf->piece_index);
+		},
+		[](std::shared_ptr<lt::session> ses[2]) {
+			TEST_EQUAL(is_seed(*ses[0]), true);
+		}
+		, tx::magnet_download
+		, test_disk().set_partial_files()
+	);
+	TEST_EQUAL(passed.size(), 10);
+}
+
 TORRENT_TEST(v1_only)
 {
 	using namespace lt;
