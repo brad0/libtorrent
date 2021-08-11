@@ -323,7 +323,8 @@ namespace {
 
 	std::vector<piece_index_t> merkle_tree::check_pieces(int const base
 		, int const index, int const file_piece_offset
-		, span<sha256_hash const> hashes)
+		, span<sha256_hash const> hashes
+		, std::map<piece_index_t, std::vector<int>>& failed_blocks)
 	{
 		INVARIANT_CHECK;
 		std::vector<piece_index_t> passed_pieces;
@@ -363,8 +364,9 @@ namespace {
 				merkle_clear_tree(m_tree, num_leafs / 2, merkle_get_parent(file_first_leaf + first_leaf));
 				m_tree[base_layer_start + i] = hashes[i];
 				TORRENT_ASSERT(num_leafs == blocks_per_piece());
-				//verify_block_hashes(m_files.file_offset(req.file) / m_files.piece_length() + index);
-				// TODO: add to failed hashes
+				auto& blocks = failed_blocks[piece_index_t{piece}];
+				for (int block = 0; block < num_leafs; ++block)
+					blocks.push_back(block);
 			}
 			else
 			{

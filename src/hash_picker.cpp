@@ -338,7 +338,7 @@ bool validate_hash_request(hash_request const& hr, file_storage const& fs)
 			int const file_piece_offset = int(m_files.file_offset(req.file) / m_files.piece_length());
 
 			ret.hash_passed = dst_tree.check_pieces(req.base, req.index
-				, file_piece_offset, hashes);
+				, file_piece_offset, hashes, ret.hash_failed);
 		}
 
 #if TORRENT_USE_INVARIANT_CHECKS

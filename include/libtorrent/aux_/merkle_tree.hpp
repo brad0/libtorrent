@@ -117,7 +117,8 @@ struct TORRENT_EXTRA_EXPORT merkle_tree
 	// returns the index of the pieces that passed the hash check
 	std::vector<piece_index_t> check_pieces(int base
 		, int index, int file_piece_offset
-		, span<sha256_hash const> hashes);
+		, span<sha256_hash const> hashes
+		, std::map<piece_index_t, std::vector<int>>& failed_blocks);
 
 	aux::vector<sha256_hash> get_piece_layer() const;
 
