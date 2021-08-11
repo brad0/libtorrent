@@ -333,7 +333,6 @@ namespace {
 		int const count = static_cast<int>(hashes.size());
 		auto const file_num_leafs = merkle_num_leafs(m_num_blocks);
 		auto const file_first_leaf = merkle_first_leaf(file_num_leafs);
-		int const first_piece = file_first_leaf >> m_blocks_per_piece_log;
 
 		int const base_layer_index = merkle_num_layers(file_num_leafs) - base;
 		int const base_layer_start = merkle_to_flat_index(base_layer_index, index);
@@ -343,13 +342,6 @@ namespace {
 		for (int i = 0; i < count; ++i)
 		{
 			int const piece = index + i;
-			if (!m_tree[merkle_get_first_child(first_piece + piece)].is_all_zeros()
-				&& !m_tree[merkle_get_first_child(first_piece + piece) + 1].is_all_zeros())
-			{
-				// this piece is already verified
-				continue;
-			}
-
 			int const first_leaf = piece << base;
 			int const num_leafs = 1 << base;
 
