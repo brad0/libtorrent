@@ -2434,7 +2434,9 @@ bool is_downloading_state(int const st)
 			if (torrent_file().info_hashes().has_v1())
 				hash_passed[0] = piece_hash == m_torrent_file->hash_for_piece(piece);
 
-			if (torrent_file().info_hashes().has_v2())
+			// if the v1 hash failed the check, don't add the v2 hashes to the
+			// merkle tree. They are most likely invalid.
+			if (torrent_file().info_hashes().has_v2() && !bool(hash_passed[0] == false))
 			{
 				hash_passed[1] = on_blocks_hashed(piece, block_hashes);
 			}
@@ -6725,6 +6727,9 @@ namespace {
 	std::shared_ptr<torrent_info> torrent::get_torrent_copy_with_hashes() const
 	{
 		if (!m_torrent_file->is_valid()) return {};
+
+//#error if we don't have hashes, also fail
+
 		auto ret = std::make_shared<torrent_info>(*m_torrent_file);
 
 		if (ret->v2())
@@ -6736,7 +6741,10 @@ namespace {
 				std::vector<char> out_layer;
 				out_layer.reserve(layer.size() * sha256_hash::size());
 				for (auto const& h : layer)
+				{
+					TORRENT_ASSERT(!h.is_all_zeros());
 					out_layer.insert(out_layer.end(), h.data(), h.data() + sha256_hash::size());
+				}
 				v2_hashes.emplace_back(std::move(out_layer));
 			}
 			ret->set_piece_layers(std::move(v2_hashes));

@@ -258,8 +258,14 @@ namespace {
 		, span<sha256_hash const> tree
 		, span<sha256_hash const> uncle_hashes)
 	{
-		// we already have all hashes
+		INVARIANT_CHECK;
+
+		// as we set the hashes of interior nodes, we may be able to validate
+		// block hashes that we had since earlier. Any blocks that can be
+		// validated, and failed, are added to this list
 		std::map<piece_index_t, std::vector<int>> failed_blocks;
+
+		// we already have all hashes
 		if (m_mode == mode_t::block_layer) return failed_blocks;
 
 		allocate_full();
@@ -292,6 +298,8 @@ namespace {
 		// the invariant
 		TORRENT_ASSERT(merkle_root(span<sha256_hash const>(tree).last(count)) == tree[0]);
 
+// #error a piece outside of this range may also fail, if one of the uncle
+// hashes is at the layer right above the block hashes
 		for (int layer_size = count; layer_size != 0; layer_size /= 2)
 		{
 			for (int i = 0; i < layer_size; ++i)
@@ -316,6 +324,36 @@ namespace {
 			if (layer_size == 1) break;
 			dest_cursor = merkle_get_parent(dest_cursor);
 			source_cursor = merkle_get_parent(source_cursor);
+		}
+
+		// if the hashes we just inserted (and validated) were the layer just
+		// above the block layer, we may be able to validate some blocks now
+		if (dest_start_idx < first_leaf && dest_start_idx >= merkle_get_parent(first_leaf))
+		{
+			int block_layer_idx = merkle_get_first_child(dest_start_idx);
+			for (int parent_layer = dest_start_idx;
+				parent_layer < dest_start_idx + count;
+				++parent_layer, block_layer_idx += 2)
+			{
+				TORRENT_ASSERT(has_node(parent_layer));
+				// no need to keep hashing into the padding
+				if (block_layer_idx >= first_leaf + m_num_blocks)
+					break;
+				if (!has_node(block_layer_idx) || (!has_node(block_layer_idx + 1) && block_layer_idx  + 1 < first_leaf + m_num_blocks))
+					continue;
+				if (merkle_validate_node(m_tree[block_layer_idx]
+					, m_tree[block_layer_idx + 1]
+					, m_tree[parent_layer]))
+					continue;
+				m_tree[block_layer_idx].clear();
+				m_tree[block_layer_idx + 1].clear();
+
+				int const pos = block_layer_idx - first_leaf;
+				int const piece = pos >> m_blocks_per_piece_log;
+				int const block = pos & ((1 << m_blocks_per_piece_log) - 1);
+				failed_blocks[piece_index_t{piece}].push_back(block);
+				failed_blocks[piece_index_t{piece}].push_back(block + 1);
+			}
 		}
 
 		return failed_blocks;
@@ -419,7 +457,6 @@ namespace {
 			// hash failure, clear all the internal nodes
 			// not the block hashes though, except for the one we just added
 			merkle_clear_tree(m_tree, leafs_size / 2, merkle_get_parent(file_first_leaf + leafs_start));
-			m_tree[block_tree_index].clear();
 			m_tree[root_index] = root;
 			return std::make_tuple(set_block_result::hash_failed, leafs_start, leafs_size);
 		}

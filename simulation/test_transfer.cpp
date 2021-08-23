@@ -148,7 +148,8 @@ void run_test(
 	lt::add_torrent_params atp = ::create_test_torrent(10
 		, (flags & tx::v2_only) ? create_torrent::v2_only
 		: (flags & tx::v1_only) ? create_torrent::v1_only
-		: create_flags_t{});
+		: create_flags_t{}
+		, (flags & tx::large_pieces) ? 16 : 2);
 	atp.flags &= ~lt::torrent_flags::auto_managed;
 	atp.flags &= ~lt::torrent_flags::paused;
 
@@ -425,6 +426,25 @@ TORRENT_TEST(v2_only_magnet_existing_files)
 	TEST_EQUAL(passed.size(), 10);
 }
 
+TORRENT_TEST(v2_only_magnet_existing_files_large_pieces)
+{
+	using namespace lt;
+	std::set<piece_index_t> passed;
+	run_test(
+		[](lt::session& ses0, lt::session& ses1) {},
+		[&](lt::session&, lt::alert const* a) {
+			if (auto const* pf = alert_cast<piece_finished_alert>(a))
+				passed.insert(pf->piece_index);
+		},
+		[](std::shared_ptr<lt::session> ses[2]) {
+			TEST_EQUAL(is_seed(*ses[0]), true);
+		}
+		, tx::v2_only | tx::magnet_download | tx::large_pieces
+		, test_disk().set_partial_files()
+	);
+	TEST_EQUAL(passed.size(), 10);
+}
+
 TORRENT_TEST(hybrid_magnet_existing_files)
 {
 	using namespace lt;
@@ -439,6 +459,25 @@ TORRENT_TEST(hybrid_magnet_existing_files)
 			TEST_EQUAL(is_seed(*ses[0]), true);
 		}
 		, tx::magnet_download
+		, test_disk().set_partial_files()
+	);
+	TEST_EQUAL(passed.size(), 10);
+}
+
+TORRENT_TEST(hybrid_magnet_existing_files_large_pieces)
+{
+	using namespace lt;
+	std::set<piece_index_t> passed;
+	run_test(
+		[](lt::session& ses0, lt::session& ses1) {},
+		[&](lt::session&, lt::alert const* a) {
+			if (auto const* pf = alert_cast<piece_finished_alert>(a))
+				passed.insert(pf->piece_index);
+		},
+		[](std::shared_ptr<lt::session> ses[2]) {
+			TEST_EQUAL(is_seed(*ses[0]), true);
+		}
+		, tx::magnet_download | tx::large_pieces
 		, test_disk().set_partial_files()
 	);
 	TEST_EQUAL(passed.size(), 10);

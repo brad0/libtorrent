@@ -240,10 +240,10 @@ std::shared_ptr<lt::torrent_info> create_test_torrent(int const piece_size
 }
 
 lt::add_torrent_params create_test_torrent(
-	int const num_pieces, lt::create_flags_t const flags)
+	int const num_pieces, lt::create_flags_t const flags, int const blocks_per_piece)
 {
 	lt::add_torrent_params params;
-	params.ti = ::create_test_torrent(lt::default_block_size * 2, num_pieces, flags);
+	params.ti = ::create_test_torrent(lt::default_block_size * blocks_per_piece, num_pieces, flags);
 	// this is unused by the test disk I/O
 	params.save_path = ".";
 	return params;
