@@ -297,20 +297,6 @@ bool validate_hash_request(hash_request const& hr, file_storage const& fs)
 
 		TORRENT_ASSERT(uncle_hashes.size() == num_uncle_hashes);
 
-		aux::vector<sha256_hash> tree(merkle_num_nodes(leaf_count));
-		std::copy(hashes.begin(), hashes.end(), tree.end() - leaf_count);
-
-		// the end of a file is a special case, we may need to pad the leaf layer
-		if (req.base == m_piece_layer && leaf_count != req.count)
-		{
-			sha256_hash const pad_hash = merkle_pad(
-				m_files.piece_length() / default_block_size, 1);
-			for (int i = req.count; i < leaf_count; ++i)
-				tree[tree.end_index() - leaf_count + i] = pad_hash;
-		}
-
-		merkle_fill_tree(tree, leaf_count);
-
 		int const base_layer_idx = file_num_layers(req.file) - req.base;
 
 		if (base_layer_idx <= 0)
@@ -320,7 +306,7 @@ bool validate_hash_request(hash_request const& hr, file_storage const& fs)
 
 		auto& dst_tree = m_merkle_trees[req.file];
 		int const dest_start_idx = merkle_to_flat_index(base_layer_idx, req.index);
-		auto hash_failed = dst_tree.add_hashes(dest_start_idx, tree, uncle_hashes);
+		auto hash_failed = dst_tree.add_hashes(dest_start_idx, hashes, uncle_hashes);
 
 		if (!hash_failed)
 			return add_hashes_result(false);

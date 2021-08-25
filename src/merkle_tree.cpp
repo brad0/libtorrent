@@ -253,9 +253,10 @@ namespace {
 	//                           ^
 	//                           |
 	//                           dest_start_idx
+//#error this must be combined with check_pieces, in order to maintain the invariant check, since any failed pieces must be cleared from the tree immediately (since that would violating the invariant otherwise)
 	boost::optional<std::map<piece_index_t, std::vector<int>>> merkle_tree::add_hashes(
 		int const dest_start_idx
-		, span<sha256_hash const> tree
+		, span<sha256_hash const> hashes
 		, span<sha256_hash const> uncle_hashes)
 	{
 		INVARIANT_CHECK;
@@ -269,6 +270,23 @@ namespace {
 		if (m_mode == mode_t::block_layer) return failed_blocks;
 
 		allocate_full();
+
+		// TODO: this can be optimized by using m_tree as storage to fill this
+		// tree into, and then clear it if the hashes fail
+		int const leaf_count = merkle_num_leafs(int(hashes.size()));
+		aux::vector<sha256_hash> tree(merkle_num_nodes(leaf_count));
+		std::copy(hashes.begin(), hashes.end(), tree.end() - leaf_count);
+
+		// the end of a file is a special case, we may need to pad the leaf layer
+//#error this shouldn't be tied to the piece layer specifically, but we need to find out how many layers above the block layer we are
+//		if (req.base == m_piece_layer && leaf_count != hashes.size())
+		{
+			sha256_hash const pad_hash = merkle_pad(blocks_per_piece(), 1);
+			for (int i = int(hashes.size()); i < leaf_count; ++i)
+				tree[tree.end_index() - leaf_count + i] = pad_hash;
+		}
+
+		merkle_fill_tree(tree, leaf_count);
 
 		int const count = int((tree.size() + 1) / 2);
 		int const base_num_layers = merkle_num_layers(count);
@@ -298,8 +316,8 @@ namespace {
 		// the invariant
 		TORRENT_ASSERT(merkle_root(span<sha256_hash const>(tree).last(count)) == tree[0]);
 
-// #error a piece outside of this range may also fail, if one of the uncle
-// hashes is at the layer right above the block hashes
+//#error a piece outside of this range may also fail, if one of the uncle \
+ hashes is at the layer right above the block hashes
 		for (int layer_size = count; layer_size != 0; layer_size /= 2)
 		{
 			for (int i = 0; i < layer_size; ++i)
@@ -325,12 +343,37 @@ namespace {
 			dest_cursor = merkle_get_parent(dest_cursor);
 			source_cursor = merkle_get_parent(source_cursor);
 		}
-
-		// if the hashes we just inserted (and validated) were the layer just
-		// above the block layer, we may be able to validate some blocks now
-		if (dest_start_idx < first_leaf && dest_start_idx >= merkle_get_parent(first_leaf))
+/*
+		// if the hashes we just inserted was at the piece layer, we may be able
+		// to validate block hashes. In fact, the bittorrent engine depends on
+		// invalid pieces being detected here.
+		// TODO: if dest_start_idx is *below* the piece layer, support that too
+		if (piece_layer_start() < block_layer_start()
+			&& dest_start_idx >= piece_layer_start()
+			&& dest_start_idx < piece_layer_start() + num_pieces())
 		{
-			int block_layer_idx = merkle_get_first_child(dest_start_idx);
+			int const block_layer_end = block_layer_start() + m_num_blocks;
+			int const blocks_in_piece = blocks_per_piece();
+			int block_layer_idx = block_layer_start() + (dest_start_idx - piece_layer_start()) * blocks_per_piece();
+			for (int piece_layer_idx = dest_start_idx;
+				piece_layer_idx < dest_start_idx + count;
+				++piece_layer_idx, block_layer_idx += blocks_in_piece)
+			{
+				int const blocks_end = std::min(block_layer_end, block_layer_idx + blocks_in_piece);
+				if (std::any_of(m_tree.begin() + block_layer_idx
+					, m_tree.begin() + blocks_end
+					, [](sha256_hash const& h) { return h.is_all_zeros(); }))
+					continue;
+
+				if (!merkle_validate_sub_tree(m_tree, block_layer_idx, blocks_end, piece_layer_idx))
+				{
+					int const piece = pos >> m_blocks_per_piece_log;
+					int const block = pos & ((1 << m_blocks_per_piece_log) - 1);
+					failed_blocks[piece_index_t{piece}].push_back(block);
+					failed_blocks[piece_index_t{piece}].push_back(block + 1);
+				}
+			}
+
 			for (int parent_layer = dest_start_idx;
 				parent_layer < dest_start_idx + count;
 				++parent_layer, block_layer_idx += 2)
@@ -355,7 +398,7 @@ namespace {
 				failed_blocks[piece_index_t{piece}].push_back(block + 1);
 			}
 		}
-
+*/
 		return failed_blocks;
 	}
 
