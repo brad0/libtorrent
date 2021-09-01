@@ -4330,7 +4330,7 @@ namespace {
 			m_predictive_pieces.erase(it);
 		}
 #endif
-
+/*
 		if (!torrent_file().info_hashes().has_v1() && blocks.empty())
 		{
 			// This is a v2 only torrent so we can definitely get block
@@ -4345,7 +4345,7 @@ namespace {
 			verify_block_hashes(index);
 			return;
 		}
-
+*/
 		// increase the total amount of failed bytes
 		if (blocks.empty())
 			add_failed_bytes(m_torrent_file->piece_size(index));
@@ -6659,19 +6659,21 @@ namespace {
 		add_hashes_result const result = m_hash_picker->add_hashes(req, hashes);
 		for (auto& p : result.hash_failed)
 		{
-			if (torrent_file().info_hashes().has_v1() && have_piece(p.first))
+			if (torrent_file().info_hashes().has_v1() && have_piece(p))
 			{
 				set_error(errors::torrent_inconsistent_hashes, torrent_status::error_file_none);
 				pause();
 				return result.valid;
 			}
 
-			TORRENT_ASSERT(!have_piece(p.first));
+			TORRENT_ASSERT(!have_piece(p));
 
 			// the piece may not have been downloaded in this session
 			// it should be open for downloading so nothing needs to be done here
-			if (!m_picker || !m_picker->is_downloading(p.first)) continue;
-			piece_failed(p.first, std::move(p.second));
+			if (!m_picker || !m_picker->is_downloading(p)) continue;
+			// TODO: in the future, reqest block hashes to know exactly which
+			// block failed the hash check
+			piece_failed(p);
 		}
 		for (piece_index_t p : result.hash_passed)
 		{

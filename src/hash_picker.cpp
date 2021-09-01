@@ -306,13 +306,16 @@ bool validate_hash_request(hash_request const& hr, file_storage const& fs)
 
 		auto& dst_tree = m_merkle_trees[req.file];
 		int const dest_start_idx = merkle_to_flat_index(base_layer_idx, req.index);
-		auto hash_failed = dst_tree.add_hashes(dest_start_idx, hashes, uncle_hashes);
+		auto const file_piece_offset = *m_files.file_piece_range(req.file).begin();
+		auto results = dst_tree.add_hashes(dest_start_idx, file_piece_offset, hashes, uncle_hashes);
 
-		if (!hash_failed)
+		if (!results)
 			return add_hashes_result(false);
 
-		ret.hash_failed = std::move(*hash_failed);
-
+		ret.hash_failed = std::move(results->failed);
+		ret.hash_passed = std::move(results->passed);
+		// TODO: fix the below code
+/*
 		if (req.base == 0)
 		{
 			std::fill_n(m_hash_verified[req.file].begin() + req.index, unpadded_count, true);
@@ -326,6 +329,7 @@ bool validate_hash_request(hash_request const& hr, file_storage const& fs)
 			ret.hash_passed = dst_tree.check_pieces(req.base, req.index
 				, file_piece_offset, hashes, ret.hash_failed);
 		}
+*/
 
 #if TORRENT_USE_INVARIANT_CHECKS
 		check_invariant(req.file);
