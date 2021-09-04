@@ -550,6 +550,7 @@ namespace {
 			// not the block hashes though, except for the one we just added
 			merkle_clear_tree(m_tree, leafs_size / 2, merkle_get_parent(first_leaf + leafs_start));
 			m_tree[root_index] = root;
+			m_tree[block_tree_index].clear();
 			return std::make_tuple(set_block_result::hash_failed, leafs_start, leafs_size);
 		}
 
