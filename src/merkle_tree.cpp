@@ -354,7 +354,7 @@ namespace {
 
 			// it may now be possible to verify the hashes of previously received blocks
 			// try to verify as many child nodes of the received hashes as possible
-			for (int i = 0; i < std::min(int(hashes.size()), num_pieces() - (dest_start_idx - first_piece_idx)); ++i)
+			for (int i = 0; i < int(hashes.size()); ++i)
 			{
 				int const piece = dest_start_idx + i;
 				// the first block in this piece
@@ -384,7 +384,8 @@ namespace {
 					ret.passed.push_back(piece_index_t{piece - first_piece_idx} + file_piece_offset);
 				}
 				TORRENT_ASSERT((piece - first_piece_idx) >= 0);
-				TORRENT_ASSERT((piece - first_piece_idx) < num_pieces());
+				if (piece - first_piece_idx >= num_pieces())
+					break;
 			}
 		}
 
