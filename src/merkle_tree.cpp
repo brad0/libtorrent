@@ -357,6 +357,8 @@ namespace {
 			for (int i = 0; i < int(hashes.size()); ++i)
 			{
 				int const piece = dest_start_idx + i;
+				if (piece - first_piece_idx >= num_pieces())
+					break;
 				// the first block in this piece
 				int const block_idx = merkle_get_first_child(piece, base);
 
@@ -384,8 +386,6 @@ namespace {
 					ret.passed.push_back(piece_index_t{piece - first_piece_idx} + file_piece_offset);
 				}
 				TORRENT_ASSERT((piece - first_piece_idx) >= 0);
-				if (piece - first_piece_idx >= num_pieces())
-					break;
 			}
 		}
 
