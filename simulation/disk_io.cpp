@@ -199,13 +199,22 @@ int pads_in_req(std::unordered_map<lt::piece_index_t, int> const& pb
 std::shared_ptr<lt::torrent_info> create_test_torrent(int const piece_size
 	, int const num_pieces, lt::create_flags_t const flags, int const num_files)
 {
-	lt::file_storage fs;
-	int const total_size = piece_size * num_pieces;
-	for (int i = 0; i < num_files; ++i)
+	lt::file_storage ifs;
+	int const total_size = num_files * piece_size * num_pieces;
+	if (num_files == 1)
 	{
-		fs.add_file("file-" + std::to_string(i + 1), total_size);
+		ifs.add_file("file-1", total_size);
 	}
-	lt::create_torrent t(fs, piece_size, flags);
+	else
+	{
+		for (int i = 0; i < num_files; ++i)
+		{
+			ifs.add_file("test-torrent/file-" + std::to_string(i + 1), total_size / num_files);
+		}
+	}
+	lt::create_torrent t(ifs, piece_size, flags);
+
+	lt::file_storage const& fs = t.files();
 
 	auto const pad_bytes = compute_pad_bytes(fs);
 
@@ -223,14 +232,19 @@ std::shared_ptr<lt::torrent_info> create_test_torrent(int const piece_size
 		lt::aux::vector<lt::sha256_hash> v2tree(lt::merkle_num_nodes(num_leafs));
 		auto const blocks = lt::span<lt::sha256_hash>(v2tree).subspan(lt::merkle_first_leaf(num_leafs));
 
-		for (auto const i : fs.piece_range())
+		for (auto const f : fs.file_range())
 		{
-			auto const hash = generate_hash2(i, fs, blocks, pads_in_piece(pad_bytes, i));
-			lt::merkle_fill_tree(v2tree, num_leafs);
-			t.set_hash2(lt::file_index_t{0}, i - 0_piece, v2tree[0]);
+			if (fs.pad_file_at(f)) continue;
+			auto const file_piece = fs.piece_index_at_file(f);
+			for (auto const p : fs.file_piece_range(f))
+			{
+				auto const hash = generate_hash2(file_piece + p, fs, blocks, pads_in_piece(pad_bytes, file_piece + p));
+				lt::merkle_fill_tree(v2tree, num_leafs);
+				t.set_hash2(f, p, v2tree[0]);
 
-			if (!(flags & lt::create_torrent::v2_only))
-				t.set_hash(i, hash);
+				if (!(flags & lt::create_torrent::v2_only))
+					t.set_hash(file_piece + p, hash);
+			}
 		}
 	}
 
