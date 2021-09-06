@@ -48,9 +48,9 @@ lt::sha1_hash generate_hash2(lt::piece_index_t p, lt::file_storage const& fs
 lt::sha256_hash generate_block_hash(lt::piece_index_t p, int offset);
 void generate_block(char* b, lt::peer_request const& r);
 std::shared_ptr<lt::torrent_info> create_test_torrent(int piece_size
-	, int num_pieces, lt::create_flags_t flags);
+	, int num_pieces, lt::create_flags_t flags, int num_files = 1);
 lt::add_torrent_params create_test_torrent(
-	int num_pieces, lt::create_flags_t flags, int blocks_per_piece);
+	int num_pieces, lt::create_flags_t flags, int blocks_per_piece, int num_files = 1);
 
 struct test_disk
 {

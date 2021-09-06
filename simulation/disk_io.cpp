@@ -197,11 +197,14 @@ int pads_in_req(std::unordered_map<lt::piece_index_t, int> const& pb
 }
 
 std::shared_ptr<lt::torrent_info> create_test_torrent(int const piece_size
-	, int const num_pieces, lt::create_flags_t const flags)
+	, int const num_pieces, lt::create_flags_t const flags, int const num_files)
 {
 	lt::file_storage fs;
 	int const total_size = piece_size * num_pieces;
-	fs.add_file("file-1", total_size);
+	for (int i = 0; i < num_files; ++i)
+	{
+		fs.add_file("file-" + std::to_string(i + 1), total_size);
+	}
 	lt::create_torrent t(fs, piece_size, flags);
 
 	auto const pad_bytes = compute_pad_bytes(fs);
@@ -240,10 +243,11 @@ std::shared_ptr<lt::torrent_info> create_test_torrent(int const piece_size
 }
 
 lt::add_torrent_params create_test_torrent(
-	int const num_pieces, lt::create_flags_t const flags, int const blocks_per_piece)
+	int const num_pieces, lt::create_flags_t const flags, int const blocks_per_piece
+	, int const num_files)
 {
 	lt::add_torrent_params params;
-	params.ti = ::create_test_torrent(lt::default_block_size * blocks_per_piece, num_pieces, flags);
+	params.ti = ::create_test_torrent(lt::default_block_size * blocks_per_piece, num_pieces, flags, num_files);
 	// this is unused by the test disk I/O
 	params.save_path = ".";
 	return params;
