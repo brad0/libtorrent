@@ -253,7 +253,6 @@ namespace {
 	//                           ^
 	//                           |
 	//                           dest_start_idx
-//#error this must be combined with check_pieces, in order to maintain the invariant check, since any failed pieces must be cleared from the tree immediately (since that would violating the invariant otherwise)
 	boost::optional<add_hashes_result_t> merkle_tree::add_hashes(
 		int const dest_start_idx
 		, piece_index_t::diff_type const file_piece_offset
@@ -355,7 +354,7 @@ namespace {
 
 			// it may now be possible to verify the hashes of previously received blocks
 			// try to verify as many child nodes of the received hashes as possible
-			for (int i = 0; i < num_pieces(); ++i)
+			for (int i = 0; i < std::min(int(hashes.size()), num_pieces() - (dest_start_idx - first_piece_idx)); ++i)
 			{
 				int const piece = dest_start_idx + i;
 				// the first block in this piece
