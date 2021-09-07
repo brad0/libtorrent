@@ -423,7 +423,7 @@ TORRENT_TEST(v2_only_magnet_multi_file)
 		}
 		, tx::v2_only | tx::magnet_download | tx::multiple_files
 	);
-	TEST_EQUAL(passed.size(), 10);
+	TEST_EQUAL(passed.size(), 30);
 }
 
 TORRENT_TEST(v2_only_magnet_existing_files)
@@ -461,7 +461,7 @@ TORRENT_TEST(v2_only_magnet_existing_files_multiple_files)
 		, tx::v2_only | tx::magnet_download | tx::multiple_files
 		, test_disk().set_partial_files()
 	);
-	TEST_EQUAL(passed.size(), 10);
+	TEST_EQUAL(passed.size(), 30);
 }
 
 TORRENT_TEST(v2_only_magnet_existing_files_large_pieces)
@@ -499,7 +499,7 @@ TORRENT_TEST(v2_only_magnet_existing_files_large_pieces_multiple_files)
 		, tx::v2_only | tx::magnet_download | tx::large_pieces | tx::multiple_files
 		, test_disk().set_partial_files()
 	);
-	TEST_EQUAL(passed.size(), 10);
+	TEST_EQUAL(passed.size(), 30);
 }
 
 TORRENT_TEST(hybrid_magnet_existing_files)
