@@ -391,13 +391,7 @@ bool validate_hash_request(hash_request const& hr, file_storage const& fs)
 #if TORRENT_USE_INVARIANT_CHECKS
 			check_invariant(f);
 #endif
-			// If the hash failure was detected within a single piece then report a piece failure
-			// otherwise report unknown. The pieces will be checked once their hashes have been
-			// downloaded.
-			if (leafs_size <= m_files.piece_length() / default_block_size)
-				return set_block_hash_result::piece_hash_failed();
-			else
-				return set_block_hash_result::unknown();
+			return set_block_hash_result::piece_hash_failed();
 		}
 		else
 		{
