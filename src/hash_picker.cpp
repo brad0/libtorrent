@@ -306,7 +306,7 @@ bool validate_hash_request(hash_request const& hr, file_storage const& fs)
 
 		auto& dst_tree = m_merkle_trees[req.file];
 		int const dest_start_idx = merkle_to_flat_index(base_layer_idx, req.index);
-		auto const file_piece_offset = *m_files.file_piece_range(req.file).begin();
+		auto const file_piece_offset = m_files.piece_index_at_file(req.file) - piece_index_t{0};
 		auto results = dst_tree.add_hashes(dest_start_idx, file_piece_offset, hashes, uncle_hashes);
 
 		if (!results)

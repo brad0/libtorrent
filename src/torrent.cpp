@@ -4295,8 +4295,14 @@ namespace {
 
 	// blocks may contain the block indices of the blocks that failed (if this is
 	// a v2 torrent).
-	void torrent::piece_failed(piece_index_t const index, std::vector<int> blocks)
+	// if we already had the piece, but we just learned that it failed because
+	// we received the hashes, `got_hashes` is true. There are certain things we
+	// don't do in that case
+	void torrent::piece_failed(piece_index_t const index //, std::vector<int> blocks
+		, bool const got_hashes)
 	{
+		std::vector<int> blocks{};
+
 		// if the last piece fails the peer connection will still
 		// think that it has received all of it until this function
 		// resets the download queue. So, we cannot do the
@@ -4308,7 +4314,7 @@ namespace {
 		TORRENT_ASSERT(has_picker());
 		TORRENT_ASSERT(index >= piece_index_t(0));
 		TORRENT_ASSERT(index < m_torrent_file->end_piece());
-		TORRENT_ASSERT(std::is_sorted(blocks.begin(), blocks.end()));
+//		TORRENT_ASSERT(std::is_sorted(blocks.begin(), blocks.end()));
 
 		inc_stats_counter(counters::num_piece_failed);
 
@@ -4346,11 +4352,17 @@ namespace {
 			return;
 		}
 */
+		// below is just handling with penalizing peers that sent use bad data.
+		// When got_hashes is true, we didn't download the *data*, we downloaded
+		// the *hashes*.
+		if (!got_hashes)
+		{
+
 		// increase the total amount of failed bytes
-		if (blocks.empty())
+//		if (blocks.empty())
 			add_failed_bytes(m_torrent_file->piece_size(index));
-		else
-			add_failed_bytes(static_cast<int>(blocks.size()) * default_block_size);
+//		else
+//			add_failed_bytes(static_cast<int>(blocks.size()) * default_block_size);
 
 #ifndef TORRENT_DISABLE_EXTENSIONS
 		for (auto& ext : m_extensions)
@@ -4379,7 +4391,7 @@ namespace {
 			}
 			return ret;
 		}();
-
+/*
 #if TORRENT_USE_ASSERTS
 			for (auto const& p : downloaders)
 			{
@@ -4390,7 +4402,7 @@ namespace {
 				}
 			}
 #endif
-
+*/
 		// did we receive this piece from a single peer?
 		// if we know exactly which blocks failed the hash, we can also be certain
 		// that all peers in the list sent us bad data
@@ -4465,6 +4477,8 @@ namespace {
 			}
 		}
 
+		}
+
 		// If m_storage isn't set here, it means we're shutting down
 		if (m_storage)
 		{
@@ -4496,7 +4510,7 @@ namespace {
 			// torrent anyway.
 			on_piece_sync(index, std::move(blocks));
 		}
-
+/*
 #if TORRENT_USE_ASSERTS
 		for (auto const& p : downloaders)
 		{
@@ -4507,6 +4521,7 @@ namespace {
 			}
 		}
 #endif
+*/
 	}
 
 	void torrent::peer_is_interesting(peer_connection& c)
@@ -6673,7 +6688,7 @@ namespace {
 			if (!m_picker || !m_picker->is_downloading(p)) continue;
 			// TODO: in the future, reqest block hashes to know exactly which
 			// block failed the hash check
-			piece_failed(p);
+			piece_failed(p, true);
 		}
 		for (piece_index_t p : result.hash_passed)
 		{
